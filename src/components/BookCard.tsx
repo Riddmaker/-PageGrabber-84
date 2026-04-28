@@ -1,0 +1,92 @@
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { colors } from '../theme';
+import { Book } from '../types';
+
+interface BookCardProps {
+  book: Book;
+  highlightCount?: number;
+  onPress: () => void;
+}
+
+export default function BookCard({ book, highlightCount = 0, onPress }: BookCardProps) {
+  const date = new Date(book.created_at).toLocaleDateString('en-US', {
+    year: '2-digit',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.card}>
+      <View style={styles.leftBar} />
+      <View style={styles.content}>
+        <Text style={styles.title} numberOfLines={2}>
+          {book.title}
+        </Text>
+        {book.author ? (
+          <Text style={styles.author} numberOfLines={1}>
+            by {book.author}
+          </Text>
+        ) : null}
+        <View style={styles.meta}>
+          <Text style={styles.metaText}>{date}</Text>
+          <Text style={styles.metaText}>
+            {highlightCount} highlight{highlightCount !== 1 ? 's' : ''}
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.arrow}>›</Text>
+    </TouchableOpacity>
+  );
+}
+
+const mono = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
+
+const styles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface0,
+    marginHorizontal: 16,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.surface1,
+  },
+  leftBar: {
+    width: 3,
+    alignSelf: 'stretch',
+    backgroundColor: colors.mauve,
+  },
+  content: {
+    flex: 1,
+    padding: 14,
+  },
+  title: {
+    fontFamily: mono,
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  author: {
+    fontFamily: mono,
+    color: colors.subtext0,
+    fontSize: 11,
+    marginTop: 4,
+  },
+  meta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  metaText: {
+    fontFamily: mono,
+    color: colors.overlay0,
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  arrow: {
+    color: colors.overlay1,
+    fontSize: 22,
+    paddingRight: 14,
+  },
+});
