@@ -38,8 +38,7 @@
           "photosPermission": "PageGrabber '84 saves captured book pages to your photo library.",
           "savePhotosPermission": "PageGrabber '84 saves captured book pages to your photo library."
         }
-      ],
-      "react-native-mlkit-ocr"
+      ]
     ],
     "extra": {
       "eas": {
