@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  GestureResponderEvent,
   NativeSyntheticEvent,
   TextInputSelectionChangeEventData,
   TextLayoutEventData,
@@ -91,6 +92,7 @@ export default function CameraScreen() {
   const [hintSessionDismissed, setHintSessionDismissed] = useState(false);
 
   const cameraRef = useRef<CameraView>(null);
+  const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingActionRef = useRef<PendingAction>(null);
   const lastSelectionRef = useRef({ start: 0, end: 0 });
   const activeHighlightRef = useRef<PageHighlight | null>(null);
@@ -109,6 +111,8 @@ export default function CameraScreen() {
   const [activeHighlight, setActiveHighlight] = useState<PageHighlight | null>(null);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showBookModal, setShowBookModal] = useState(false);
+  const [afMode, setAfMode] = useState<'on' | 'off'>('off');
+  const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
 
   const ocrText = useMemo(() => ocrWords.map((w) => w.text).join(' '), [ocrWords]);
 
@@ -129,6 +133,17 @@ export default function CameraScreen() {
       Animated.timing(savedOpacity, { toValue: 0, duration: 350, useNativeDriver: true }).start();
     }, 1100);
   }, [savedOpacity]);
+
+  const handleCameraTap = useCallback((e: GestureResponderEvent) => {
+    const { locationX, locationY } = e.nativeEvent;
+    setFocusPoint({ x: locationX, y: locationY });
+    setAfMode('on');
+    if (focusTimerRef.current) clearTimeout(focusTimerRef.current);
+    focusTimerRef.current = setTimeout(() => {
+      setAfMode('off');
+      setFocusPoint(null);
+    }, 1500);
+  }, []);
 
   const openBookModal = useCallback(async () => {
     if (db) {
@@ -404,7 +419,22 @@ export default function CameraScreen() {
   return (
     <View style={styles.root}>
       {phase === 'camera' && (
-        <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="back" autofocus="off" />
+        <>
+          <CameraView
+            ref={cameraRef}
+            style={StyleSheet.absoluteFillObject}
+            facing="back"
+            autofocus={afMode}
+            zoom={0}
+          />
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={handleCameraTap} />
+          {focusPoint && (
+            <View
+              pointerEvents="none"
+              style={[styles.focusRing, { left: focusPoint.x - 32, top: focusPoint.y - 32 }]}
+            />
+          )}
+        </>
       )}
 
       {phase === 'processing' && (
@@ -613,6 +643,13 @@ const styles = StyleSheet.create({
   outlineBtn: {
     borderWidth: 1, borderColor: colors.green,
     paddingHorizontal: 20, paddingVertical: 10,
+  },
+  focusRing: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderWidth: 1,
+    borderColor: colors.yellow,
   },
   processingOverlay: {
     ...StyleSheet.absoluteFillObject,
