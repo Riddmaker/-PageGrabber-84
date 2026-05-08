@@ -9,7 +9,8 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import { colors } from '../theme';
+import { colors, font } from '../theme';
+import { useSettings } from '../context/SettingsContext';
 
 interface NoteModalProps {
   visible: boolean;
@@ -24,6 +25,7 @@ export default function NoteModal({
   onSave,
   onCancel,
 }: NoteModalProps) {
+  const { t } = useSettings();
   const [note, setNote] = useState('');
 
   useEffect(() => {
@@ -42,17 +44,17 @@ export default function NoteModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.card}>
-          <Text style={styles.label}>// SELECTED TEXT</Text>
+          <Text style={styles.label}>// {t('selectedText')}</Text>
           <Text style={styles.preview} numberOfLines={3}>
             {selectedText}
           </Text>
 
-          <Text style={styles.label}>// YOUR NOTE</Text>
+          <Text style={styles.label}>// {t('yourNote')}</Text>
           <TextInput
             style={styles.input}
             value={note}
             onChangeText={setNote}
-            placeholder="Type your note here..."
+            placeholder={t('notePlaceholder')}
             placeholderTextColor={colors.overlay0}
             multiline
             autoFocus
@@ -61,13 +63,13 @@ export default function NoteModal({
 
           <View style={styles.row}>
             <TouchableOpacity onPress={onCancel} style={[styles.btn, styles.cancelBtn]}>
-              <Text style={[styles.btnText, { color: colors.overlay1 }]}>[ CANCEL ]</Text>
+              <Text style={[styles.btnText, { color: colors.overlay1 }]}>[ {t('cancel')} ]</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => onSave(note.trim())}
               style={[styles.btn, styles.saveBtn]}
             >
-              <Text style={[styles.btnText, { color: colors.green }]}>[ SAVE ]</Text>
+              <Text style={[styles.btnText, { color: colors.green }]}>[ {t('saveBtn')} ]</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -90,7 +92,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   label: {
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontFamily: font.mono,
     color: colors.overlay1,
     fontSize: 10,
     letterSpacing: 2,
@@ -98,7 +100,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   preview: {
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontFamily: font.mono,
     color: colors.subtext1,
     fontSize: 13,
     lineHeight: 20,
@@ -107,7 +109,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   input: {
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontFamily: font.mono,
     color: colors.text,
     fontSize: 14,
     lineHeight: 22,
@@ -132,7 +134,7 @@ const styles = StyleSheet.create({
   cancelBtn: { borderColor: colors.surface1 },
   saveBtn: { borderColor: colors.green },
   btnText: {
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontFamily: font.mono,
     fontSize: 12,
     letterSpacing: 1,
   },

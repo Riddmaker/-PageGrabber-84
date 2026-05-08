@@ -6,6 +6,7 @@ import { RootStackParamList } from '../types';
 import CameraScreen from '../screens/CameraScreen';
 import LibraryScreen from '../screens/LibraryScreen';
 import BookDetailScreen from '../screens/BookDetailScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -23,6 +24,7 @@ export default function AppNavigator() {
           options={{ animation: 'slide_from_left' }}
         />
         <Stack.Screen name="BookDetail" component={BookDetailScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

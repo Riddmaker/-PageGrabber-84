@@ -1,5 +1,6 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { zip as createZip, strToU8 } from 'fflate';
 import { Book, Highlight } from '../types';
 
 function buildMarkdown(book: Book, highlights: Highlight[]): string {
@@ -26,6 +27,14 @@ function sanitizeFilename(name: string): string {
   return name.replace(/[^a-zA-Z0-9_\- ]/g, '').trim().replace(/\s+/g, '_') || 'untitled';
 }
 
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 export async function exportBook(book: Book, highlights: Highlight[]): Promise<void> {
   const content = buildMarkdown(book, highlights);
   const filename = `${sanitizeFilename(book.title)}.md`;
@@ -48,41 +57,35 @@ export async function bulkExport(
   books: Book[],
   getHighlights: (bookId: string) => Promise<Highlight[]>
 ): Promise<void> {
-  const exportDir = `${FileSystem.cacheDirectory}pg84_export/`;
-  await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true });
+  const files: Record<string, Uint8Array> = {};
 
   for (const book of books) {
     const highlights = await getHighlights(book.id);
     const content = buildMarkdown(book, highlights);
     const filename = `${sanitizeFilename(book.title)}.md`;
-    await FileSystem.writeAsStringAsync(`${exportDir}${filename}`, content, {
-      encoding: FileSystem.EncodingType.UTF8,
-    });
+    files[filename] = strToU8(content);
   }
 
-  try {
-    // react-native-zip-archive requires native build
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { zip } = require('react-native-zip-archive');
-    const zipPath = `${FileSystem.cacheDirectory}PageGrabber84_Export.zip`;
-    await zip(exportDir, zipPath);
+  const zipData = await new Promise<Uint8Array>((resolve, reject) => {
+    createZip(files, (err, data) => {
+      if (err) reject(err);
+      else resolve(data);
+    });
+  });
 
-    const canShare = await Sharing.isAvailableAsync();
-    if (canShare) {
-      await Sharing.shareAsync(zipPath, {
-        mimeType: 'application/zip',
-        dialogTitle: 'Export All Books',
-      });
-    }
-  } catch {
-    // Fallback: share individual files when zip module isn't available
-    for (const book of books) {
-      const filename = `${sanitizeFilename(book.title)}.md`;
-      const path = `${exportDir}${filename}`;
-      const info = await FileSystem.getInfoAsync(path);
-      if (info.exists) {
-        await Sharing.shareAsync(path, { mimeType: 'text/markdown' });
-      }
-    }
+  const now = new Date();
+  const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const zipPath = `${FileSystem.cacheDirectory}${date}_pagegrabber_export.zip`;
+
+  await FileSystem.writeAsStringAsync(zipPath, uint8ToBase64(zipData), {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  const canShare = await Sharing.isAvailableAsync();
+  if (canShare) {
+    await Sharing.shareAsync(zipPath, {
+      mimeType: 'application/zip',
+      dialogTitle: 'Export All Books',
+    });
   }
 }

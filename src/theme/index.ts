@@ -37,6 +37,7 @@ export const colors = {
 
 export const font = {
   mono: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  book: Platform.OS === 'ios' ? 'Georgia' : 'serif',
 };
 
 export const commonStyles = StyleSheet.create({
