@@ -1,0 +1,35 @@
+{
+  "name": "pagegrabber-84",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "build:android": "eas build --platform android --profile preview",
+    "build:ios": "eas build --platform ios --profile preview"
+  },
+  "dependencies": {
+    "@react-navigation/native": "^7.2.2",
+    "@react-navigation/native-stack": "^7.14.12",
+    "expo": "~55.0.18",
+    "expo-camera": "~55.0.16",
+    "expo-crypto": "~55.0.14",
+    "expo-file-system": "~55.0.17",
+    "expo-media-library": "~55.0.15",
+    "expo-sharing": "~55.0.18",
+    "expo-sqlite": "~55.0.15",
+    "expo-status-bar": "~55.0.5",
+    "react": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-mlkit-ocr": "^0.3.0",
+    "react-native-zip-archive": "^7.1.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "~19.2.10",
+    "typescript": "^5.3.3"
+  }
+}

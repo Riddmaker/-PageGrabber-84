@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "PageGrabber '84",
+    "slug": "pagegrabber-84",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#1e1e2e"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.riddmaker.pagegrabber84",
+      "infoPlist": {
+        "NSCameraUsageDescription": "PageGrabber '84 needs camera access to capture book pages.",
+        "NSPhotoLibraryUsageDescription": "PageGrabber '84 saves captured book pages to your photo library."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1e1e2e"
+      },
+      "package": "com.riddmaker.pagegrabber84",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
+    },
+    "plugins": [
+      "expo-camera",
+      "expo-sqlite",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "PageGrabber '84 saves captured book pages to your photo library.",
+          "savePhotosPermission": "PageGrabber '84 saves captured book pages to your photo library."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id-here"
+      }
+    }
+  }
+}
