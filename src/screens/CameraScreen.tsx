@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   TouchableOpacity,
+  Platform,
   Animated,
   StyleSheet,
   ActivityIndicator,
@@ -459,7 +460,7 @@ export default function CameraScreen() {
            */}
           <View>
             <TextInput
-              editable={false}
+              editable={Platform.OS === 'android'}
               showSoftInputOnFocus={false}
               caretHidden={true}
               multiline

@@ -26,7 +26,8 @@ export default function OcrHintBanner({ onDismissSession, onDismissForever }: Pr
         </TouchableOpacity>
         <Text style={styles.title}>// SCAN TIP</Text>
       </View>
-      <Text style={styles.body}>{t('ocrHintText')}</Text>
+      <Text style={styles.body}>1. {t('ocrHintText')}</Text>
+      <Text style={styles.body}>2. {t('ocrHintLensText')}</Text>
       <TouchableOpacity onPress={onDismissForever} activeOpacity={0.7} style={styles.hideBtn}>
         <Text style={styles.hideBtnText}>[ {t('ocrHintHideForever')} ]</Text>
       </TouchableOpacity>
