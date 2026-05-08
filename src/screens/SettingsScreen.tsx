@@ -21,7 +21,20 @@ import {
 } from '../i18n';
 import ScanlineOverlay from '../components/ScanlineOverlay';
 
-const GITHUB_ISSUES_URL = 'https://github.com/Riddmaker/-PageGrabber-84/issues/new';
+const GITHUB_REPO = 'https://github.com/Riddmaker/-PageGrabber-84';
+
+function buildBugReportUrl(version: string): string {
+  const body = [
+    `App Version: ${version}`,
+    '',
+    'What happened?',
+    '[Please describe the bug]',
+    '',
+    'Screenshots:',
+    '[Please attach any screenshots here]',
+  ].join('\n');
+  return `${GITHUB_REPO}/issues/new?title=%5BBug%5D%20&body=${encodeURIComponent(body)}`;
+}
 
 export default function SettingsScreen() {
   const navigation = useNavigation();
@@ -87,7 +100,7 @@ export default function SettingsScreen() {
         </View>
         <TouchableOpacity
           style={styles.row}
-          onPress={() => Linking.openURL(GITHUB_ISSUES_URL)}
+          onPress={() => Linking.openURL(buildBugReportUrl(version))}
           activeOpacity={0.7}
         >
           <Text style={styles.bugReportText}>[ {t('reportBug')} ]</Text>
