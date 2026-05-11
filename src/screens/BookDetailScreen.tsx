@@ -5,7 +5,6 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Platform,
   Alert,
   ActivityIndicator,
 } from 'react-native';
@@ -13,13 +12,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { colors } from '../theme';
+import { Feather } from '@expo/vector-icons';
+import { colors, font } from '../theme';
 import { useDatabase } from '../context/DatabaseContext';
+import { useSettings } from '../context/SettingsContext';
 import { getBook } from '../database/books';
-import { getHighlightsByBook } from '../database/highlights';
+import { getHighlightsByBook, deleteHighlight } from '../database/highlights';
 import { exportBook } from '../utils/export';
 import { Book, Highlight, RootStackParamList } from '../types';
-import HighlightedImage from '../components/HighlightedImage';
 import ScanlineOverlay from '../components/ScanlineOverlay';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookDetail'>;
@@ -29,6 +29,7 @@ export default function BookDetailScreen() {
   const route = useRoute<Props['route']>();
   const { bookId, bookTitle } = route.params;
   const { db } = useDatabase();
+  const { t, formatDate } = useSettings();
 
   const [book, setBook] = useState<Book | null>(null);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
@@ -48,23 +49,45 @@ export default function BookDetailScreen() {
     }, [db, bookId])
   );
 
-  const handleExport = async () => {
+  const handleDeleteHighlight = useCallback(
+    (id: string) => {
+      Alert.alert(t('removeHighlight'), undefined, [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('remove'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!db) return;
+            try {
+              await deleteHighlight(db, id);
+              setHighlights((prev) => prev.filter((h) => h.id !== id));
+            } catch {
+              Alert.alert(t('error'), t('couldNotRemove'));
+            }
+          },
+        },
+      ]);
+    },
+    [db, t]
+  );
+
+  const handleExport = useCallback(async () => {
     if (!book) return;
     setExporting(true);
     try {
       await exportBook(book, highlights);
     } catch (e) {
-      Alert.alert('Export failed', String(e));
+      Alert.alert(t('exportFailed'), String(e));
     } finally {
       setExporting(false);
     }
-  };
+  }, [book, highlights, t]);
 
   return (
     <View style={styles.root}>
       <SafeAreaView edges={['top']} style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>‹ BACK</Text>
+          <Text style={styles.backText}>{t('back')}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {bookTitle}
@@ -73,7 +96,7 @@ export default function BookDetailScreen() {
           {exporting ? (
             <ActivityIndicator size="small" color={colors.yellow} />
           ) : (
-            <Text style={styles.exportText}>EXPORT</Text>
+            <Text style={styles.exportText}>{t('export')}</Text>
           )}
         </TouchableOpacity>
       </SafeAreaView>
@@ -81,10 +104,11 @@ export default function BookDetailScreen() {
       {book ? (
         <View style={styles.meta}>
           {book.author ? (
-            <Text style={styles.author}>by {book.author}</Text>
+            <Text style={styles.author}>{t('byAuthor')} {book.author}</Text>
           ) : null}
           <Text style={styles.count}>
-            {highlights.length} highlight{highlights.length !== 1 ? 's' : ''}
+            {highlights.length}{' '}
+            {highlights.length === 1 ? t('highlightSingular') : t('highlightPlural')}
           </Text>
         </View>
       ) : null}
@@ -100,25 +124,32 @@ export default function BookDetailScreen() {
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <View style={styles.card}>
-              <HighlightedImage
-                imageUri={item.image_uri}
-                boundingBoxesJson={item.bounding_boxes}
-              />
-              <View style={styles.textBlock}>
-                <Text style={styles.extractedText}>"{item.extracted_text}"</Text>
-                {item.user_note ? (
+              <View style={styles.pageSnippet}>
+                <Text style={styles.snippetText}>{item.extracted_text}</Text>
+              </View>
+              {item.user_note ? (
+                <View style={styles.noteBlock}>
                   <Text style={styles.noteText}>// {item.user_note}</Text>
-                ) : null}
-                <Text style={styles.timestamp}>
-                  {new Date(item.created_at).toLocaleString()}
-                </Text>
+                </View>
+              ) : null}
+              <View style={styles.cardFooter}>
+                <Text style={styles.timestamp}>{formatDate(item.created_at)}</Text>
+                <TouchableOpacity
+                  onPress={() => handleDeleteHighlight(item.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+                  style={styles.deleteBtn}
+                >
+                  <Text style={styles.deleteBracket}>[</Text>
+                  <Feather name="trash-2" size={14} color={colors.maroon} />
+                  <Text style={styles.deleteBracket}>]</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyText}>
-                {'> No highlights yet.\n> Go back and capture a page.'}
+                {t('noHighlightsYet')}{'\n'}{t('goBackCapture')}
               </Text>
               <Text style={styles.emptyCursor}>█</Text>
             </View>
@@ -130,8 +161,6 @@ export default function BookDetailScreen() {
     </View>
   );
 }
-
-const mono = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.base },
@@ -147,13 +176,13 @@ const styles = StyleSheet.create({
   },
   backBtn: { paddingHorizontal: 8, paddingVertical: 10 },
   backText: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.subtext0,
     fontSize: 13,
     letterSpacing: 1,
   },
   headerTitle: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.text,
     fontSize: 13,
     flex: 1,
@@ -162,7 +191,7 @@ const styles = StyleSheet.create({
   },
   exportBtn: { paddingHorizontal: 8, paddingVertical: 10, minWidth: 60, alignItems: 'flex-end' },
   exportText: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.yellow,
     fontSize: 10,
     letterSpacing: 1,
@@ -176,12 +205,12 @@ const styles = StyleSheet.create({
     borderColor: colors.surface0,
   },
   author: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.subtext0,
     fontSize: 11,
   },
   count: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.overlay0,
     fontSize: 11,
     letterSpacing: 1,
@@ -194,43 +223,69 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.surface1,
     overflow: 'hidden',
-    backgroundColor: colors.surface0,
   },
-  textBlock: {
-    padding: 14,
+  pageSnippet: {
+    backgroundColor: '#F4EDD3',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.yellow,
+  },
+  snippetText: {
+    fontFamily: font.book,
+    fontSize: 16,
+    lineHeight: 26,
+    color: '#2D1F0E',
+  },
+  noteBlock: {
+    backgroundColor: colors.surface0,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderTopWidth: 1,
     borderColor: colors.surface1,
   },
-  extractedText: {
-    fontFamily: mono,
-    color: colors.text,
-    fontSize: 13,
-    lineHeight: 20,
-  },
   noteText: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.yellow,
     fontSize: 12,
     lineHeight: 18,
-    marginTop: 8,
     fontStyle: 'italic',
   },
+  cardFooter: {
+    backgroundColor: colors.mantle,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderColor: colors.surface1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deleteBracket: {
+    fontFamily: font.mono,
+    color: colors.maroon,
+    fontSize: 14,
+  },
   timestamp: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.overlay0,
     fontSize: 10,
-    marginTop: 8,
     letterSpacing: 1,
   },
   empty: { padding: 32, gap: 8 },
   emptyText: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.overlay0,
     fontSize: 13,
     lineHeight: 22,
   },
   emptyCursor: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.green,
     fontSize: 13,
     marginTop: 8,

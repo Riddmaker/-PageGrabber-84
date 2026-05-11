@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { colors } from '../theme';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { colors, font } from '../theme';
+import { useSettings } from '../context/SettingsContext';
 import { Book } from '../types';
 
 interface BookCardProps {
@@ -10,11 +11,7 @@ interface BookCardProps {
 }
 
 export default function BookCard({ book, highlightCount = 0, onPress }: BookCardProps) {
-  const date = new Date(book.created_at).toLocaleDateString('en-US', {
-    year: '2-digit',
-    month: '2-digit',
-    day: '2-digit',
-  });
+  const { t, formatDate } = useSettings();
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.card}>
@@ -25,13 +22,14 @@ export default function BookCard({ book, highlightCount = 0, onPress }: BookCard
         </Text>
         {book.author ? (
           <Text style={styles.author} numberOfLines={1}>
-            by {book.author}
+            {t('byAuthor')} {book.author}
           </Text>
         ) : null}
         <View style={styles.meta}>
-          <Text style={styles.metaText}>{date}</Text>
+          <Text style={styles.metaText}>{formatDate(book.created_at)}</Text>
           <Text style={styles.metaText}>
-            {highlightCount} highlight{highlightCount !== 1 ? 's' : ''}
+            {highlightCount}{' '}
+            {highlightCount === 1 ? t('highlightSingular') : t('highlightPlural')}
           </Text>
         </View>
       </View>
@@ -39,8 +37,6 @@ export default function BookCard({ book, highlightCount = 0, onPress }: BookCard
     </TouchableOpacity>
   );
 }
-
-const mono = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 
 const styles = StyleSheet.create({
   card: {
@@ -62,13 +58,13 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   title: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.text,
     fontSize: 14,
     lineHeight: 20,
   },
   author: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.subtext0,
     fontSize: 11,
     marginTop: 4,
@@ -79,7 +75,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   metaText: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.overlay0,
     fontSize: 10,
     letterSpacing: 1,

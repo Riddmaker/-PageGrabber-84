@@ -28,14 +28,9 @@ export interface OcrWord {
   frame: BoundingBox;
 }
 
-export interface SavedBoundingBoxes {
-  words: Array<{ text: string; frame: BoundingBox }>;
-  merged: BoundingBox;
-  imageSize: { width: number; height: number };
-}
-
 export type RootStackParamList = {
   Camera: undefined;
   Library: undefined;
   BookDetail: { bookId: string; bookTitle: string };
+  Settings: undefined;
 };

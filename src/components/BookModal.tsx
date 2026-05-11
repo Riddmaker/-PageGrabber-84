@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -12,14 +12,16 @@ import {
   Alert,
 } from 'react-native';
 import * as Crypto from 'expo-crypto';
-import { colors } from '../theme';
+import { colors, font } from '../theme';
+import { useSettings } from '../context/SettingsContext';
 import { Book } from '../types';
 import { AppDatabase } from '../database';
-import { getAllBooks, createBook } from '../database/books';
+import { createBook } from '../database/books';
 
 interface BookModalProps {
   visible: boolean;
   db: AppDatabase | null;
+  books: Book[];
   activeBook: Book | null;
   onSelect: (book: Book) => void;
   onClose: () => void;
@@ -28,25 +30,26 @@ interface BookModalProps {
 export default function BookModal({
   visible,
   db,
+  books,
   activeBook,
   onSelect,
   onClose,
 }: BookModalProps) {
-  const [books, setBooks] = useState<Book[]>([]);
+  const { t } = useSettings();
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
 
-  useEffect(() => {
-    if (visible && db) {
-      getAllBooks(db).then(setBooks);
-    }
-    if (!visible) {
-      setCreating(false);
-      setTitle('');
-      setAuthor('');
-    }
-  }, [visible, db]);
+  const resetForm = () => {
+    setCreating(false);
+    setTitle('');
+    setAuthor('');
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   const handleCreate = async () => {
     if (!db || !title.trim()) return;
@@ -58,23 +61,28 @@ export default function BookModal({
     };
     try {
       await createBook(db, book);
+      resetForm();
       onSelect(book);
     } catch (e) {
-      Alert.alert('Error', 'Could not create book.');
+      Alert.alert(t('error'), t('couldNotCreateBook'));
     }
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         style={styles.backdrop}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <Text style={styles.title}>// SELECT BOOK</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Text style={styles.closeBtn}>✕</Text>
+            <Text style={styles.headerTitle}>// {t('selectBook')}</Text>
+            <TouchableOpacity
+              onPress={handleClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.closeBtn}
+            >
+              <Text style={styles.closeBtnText}>[ x ]</Text>
             </TouchableOpacity>
           </View>
 
@@ -86,7 +94,10 @@ export default function BookModal({
                 style={styles.list}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    onPress={() => onSelect(item)}
+                    onPress={() => {
+                      resetForm();
+                      onSelect(item);
+                    }}
                     style={[
                       styles.bookRow,
                       activeBook?.id === item.id && styles.bookRowActive,
@@ -102,33 +113,33 @@ export default function BookModal({
                   </TouchableOpacity>
                 )}
                 ListEmptyComponent={
-                  <Text style={styles.empty}>No books yet. Create one below.</Text>
+                  <Text style={styles.empty}>{t('noBooksYet')}</Text>
                 }
               />
               <TouchableOpacity
                 style={styles.createBtn}
                 onPress={() => setCreating(true)}
               >
-                <Text style={styles.createBtnText}>[ + NEW BOOK ]</Text>
+                <Text style={styles.createBtnText}>[ {t('newBook')} ]</Text>
               </TouchableOpacity>
             </>
           ) : (
             <View style={styles.form}>
-              <Text style={styles.label}>// TITLE *</Text>
+              <Text style={styles.label}>// {t('titleLabel')}</Text>
               <TextInput
                 style={styles.input}
                 value={title}
                 onChangeText={setTitle}
-                placeholder="Book title"
+                placeholder={t('titlePlaceholder')}
                 placeholderTextColor={colors.overlay0}
                 autoFocus
               />
-              <Text style={styles.label}>// AUTHOR</Text>
+              <Text style={styles.label}>// {t('authorLabel')}</Text>
               <TextInput
                 style={styles.input}
                 value={author}
                 onChangeText={setAuthor}
-                placeholder="Author name (optional)"
+                placeholder={t('authorPlaceholder')}
                 placeholderTextColor={colors.overlay0}
               />
               <View style={styles.row}>
@@ -137,7 +148,7 @@ export default function BookModal({
                   style={[styles.btn, { borderColor: colors.surface1 }]}
                 >
                   <Text style={[styles.btnText, { color: colors.overlay1 }]}>
-                    [ BACK ]
+                    [ {t('backBtn')} ]
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -145,7 +156,7 @@ export default function BookModal({
                   style={[styles.btn, { borderColor: colors.green }]}
                 >
                   <Text style={[styles.btnText, { color: colors.green }]}>
-                    [ CREATE ]
+                    [ {t('createBtn')} ]
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -157,8 +168,6 @@ export default function BookModal({
   );
 }
 
-const mono = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
-
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
@@ -169,7 +178,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.base,
     borderTopWidth: 1,
     borderColor: colors.surface1,
-    maxHeight: '70%',
+    height: '60%',
     paddingBottom: 32,
   },
   header: {
@@ -181,15 +190,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: colors.surface0,
   },
-  title: {
-    fontFamily: mono,
+  headerTitle: {
+    fontFamily: font.mono,
     color: colors.green,
     fontSize: 11,
     letterSpacing: 2,
   },
   closeBtn: {
+    padding: 8,
+  },
+  closeBtnText: {
+    fontFamily: font.mono,
     color: colors.overlay1,
-    fontSize: 16,
+    fontSize: 12,
+    letterSpacing: 1,
   },
   list: { flex: 1 },
   bookRow: {
@@ -202,18 +216,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface0,
   },
   bookTitle: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.text,
     fontSize: 14,
   },
   bookAuthor: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.overlay1,
     fontSize: 11,
     marginTop: 2,
   },
   empty: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.overlay0,
     textAlign: 'center',
     padding: 24,
@@ -227,14 +241,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   createBtnText: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.mauve,
     fontSize: 13,
     letterSpacing: 1,
   },
   form: { padding: 20 },
   label: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.overlay1,
     fontSize: 10,
     letterSpacing: 2,
@@ -242,7 +256,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   input: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     color: colors.text,
     fontSize: 14,
     backgroundColor: colors.surface0,
@@ -262,7 +276,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   btnText: {
-    fontFamily: mono,
+    fontFamily: font.mono,
     fontSize: 12,
     letterSpacing: 1,
   },

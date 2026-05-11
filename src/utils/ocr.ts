@@ -1,32 +1,80 @@
 import { OcrWord, BoundingBox } from '../types';
 
-// Mock data for Expo Go / development without native build
-function getMockWords(): OcrWord[] {
-  const lines = [
-    ['The', 'quick', 'brown', 'fox', 'jumps'],
-    ['over', 'the', 'lazy', 'dog.'],
-    ['Pack', 'my', 'box', 'with', 'five'],
-    ['dozen', 'liquor', 'jugs.'],
-  ];
+// ─── Provider interface ────────────────────────────────────────────────────
 
-  const words: OcrWord[] = [];
-  let id = 0;
-  lines.forEach((lineWords, lineIdx) => {
-    let x = 40;
-    lineWords.forEach((text) => {
-      words.push({
-        id: `mock-${id++}`,
-        text,
-        frame: { x, y: 120 + lineIdx * 36, width: text.length * 12 + 8, height: 28 },
-      });
-      x += text.length * 12 + 16;
-    });
-  });
-  return words;
+interface OcrProvider {
+  recognizeText(imageUri: string): Promise<OcrWord[]>;
 }
 
+// ─── ML Kit provider (on-device, no network) ──────────────────────────────
+
+class MlKitOcrProvider implements OcrProvider {
+  async recognizeText(imageUri: string): Promise<OcrWord[]> {
+    const MlkitOcr = require('react-native-mlkit-ocr').default;
+    const result: Array<{
+      lines?: Array<{
+        elements?: Array<{
+          text: string;
+          bounding?: Record<string, number>;
+          frame?: Record<string, number>;
+        }>;
+      }>;
+    }> = await MlkitOcr.detectFromUri(imageUri);
+
+    const words: OcrWord[] = [];
+    let idx = 0;
+    for (const block of result) {
+      for (const line of block.lines ?? []) {
+        for (const el of line.elements ?? []) {
+          const raw = el.bounding ?? el.frame ?? {};
+          words.push({ id: `w${idx++}`, text: el.text, frame: normalizeBounding(raw) });
+        }
+      }
+    }
+    return words;
+  }
+}
+
+// ─── Mock provider (Expo Go / simulator fallback) ─────────────────────────
+
+class MockOcrProvider implements OcrProvider {
+  async recognizeText(_imageUri: string): Promise<OcrWord[]> {
+    return getMockWords();
+  }
+}
+
+// ─── Provider selection ────────────────────────────────────────────────────
+
+let _provider: OcrProvider | null = null;
+
+function getProvider(): OcrProvider {
+  if (_provider) return _provider;
+
+  try {
+    require('react-native-mlkit-ocr');
+    _provider = new MlKitOcrProvider();
+  } catch {
+    console.warn('[OCR] react-native-mlkit-ocr not available — using mock data (Expo Go / simulator)');
+    _provider = new MockOcrProvider();
+  }
+
+  return _provider;
+}
+
+// ─── Public API ────────────────────────────────────────────────────────────
+
+export async function recognizeText(imageUri: string): Promise<OcrWord[]> {
+  try {
+    return await getProvider().recognizeText(imageUri);
+  } catch (e) {
+    console.error('[OCR] Provider failed, falling back to mock:', e);
+    return getMockWords();
+  }
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
 function normalizeBounding(b: Record<string, number>): BoundingBox {
-  // Handle both {left,top,right,bottom} and {x,y,width,height} formats
   if (typeof b.left === 'number') {
     return {
       x: b.left,
@@ -38,36 +86,21 @@ function normalizeBounding(b: Record<string, number>): BoundingBox {
   return { x: b.x ?? 0, y: b.y ?? 0, width: b.width ?? 0, height: b.height ?? 0 };
 }
 
-export async function recognizeText(imageUri: string): Promise<OcrWord[]> {
-  try {
-    // react-native-mlkit-ocr requires a native build (EAS / expo run:android|ios)
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const MlkitOcr = require('react-native-mlkit-ocr').default;
-    const result: Array<{
-      text: string;
-      lines?: Array<{
-        text: string;
-        elements?: Array<{ text: string; bounding?: Record<string, number>; frame?: Record<string, number> }>;
-      }>;
-    }> = await MlkitOcr.detectFromUri(imageUri);
-
-    const words: OcrWord[] = [];
-    let idx = 0;
-    for (const block of result) {
-      for (const line of block.lines ?? []) {
-        for (const el of line.elements ?? []) {
-          const raw = el.bounding ?? el.frame ?? {};
-          words.push({
-            id: `w${idx++}`,
-            text: el.text,
-            frame: normalizeBounding(raw as Record<string, number>),
-          });
-        }
-      }
-    }
-    return words;
-  } catch {
-    console.warn('[OCR] Native module unavailable — using mock data');
-    return getMockWords();
-  }
+function getMockWords(): OcrWord[] {
+  const lines = [
+    ['The', 'quick', 'brown', 'fox', 'jumps'],
+    ['over', 'the', 'lazy', 'dog.'],
+    ['Pack', 'my', 'box', 'with', 'five'],
+    ['dozen', 'liquor', 'jugs.'],
+  ];
+  const words: OcrWord[] = [];
+  let id = 0;
+  lines.forEach((lineWords, lineIdx) => {
+    let x = 40;
+    lineWords.forEach((text) => {
+      words.push({ id: `mock-${id++}`, text, frame: { x, y: 120 + lineIdx * 36, width: text.length * 12 + 8, height: 28 } });
+      x += text.length * 12 + 16;
+    });
+  });
+  return words;
 }
