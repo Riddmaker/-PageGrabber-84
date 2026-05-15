@@ -9,7 +9,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.riddmaker.pagegrabber84",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSCameraUsageDescription": "PageGrabber '84 needs camera access to capture book pages.",
         "NSPhotoLibraryUsageDescription": "PageGrabber '84 saves captured book pages to your photo library.",
@@ -41,6 +41,15 @@
         {
           "photosPermission": "PageGrabber '84 saves captured book pages to your photo library.",
           "savePhotosPermission": "PageGrabber '84 saves captured book pages to your photo library."
+        }
+      ],
+      "./plugins/withMlKitTextRecognition",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.0"
+          }
         }
       ]
     ],

@@ -89,7 +89,7 @@ export default function CameraScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { activeBook, setActiveBook } = useBook();
   const { db } = useDatabase();
-  const { t, hideOcrHint, setHideOcrHint } = useSettings();
+  const { t, hideOcrHint, setHideOcrHint, ocrModelReady, markOcrModelReady } = useSettings();
   const [hintSessionDismissed, setHintSessionDismissed] = useState(false);
 
   const cameraRef = useRef<CameraView>(null);
@@ -114,6 +114,7 @@ export default function CameraScreen() {
   const [showBookModal, setShowBookModal] = useState(false);
   const [afMode, setAfMode] = useState<'on' | 'off'>('off');
   const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
+  const [torchOn, setTorchOn] = useState(false);
 
   const ocrText = useMemo(() => ocrWords.map((w) => w.text).join(' '), [ocrWords]);
 
@@ -174,13 +175,14 @@ export default function CameraScreen() {
       setPageHighlights([]);
       setActiveHighlightBoth(null);
       lastSelectionRef.current = { start: 0, end: 0 };
+      if (!ocrModelReady) markOcrModelReady();
       setPhase('reviewing');
     } catch (err) {
       console.error(err);
       Alert.alert(t('error'), t('captureFailed'));
       setPhase('camera');
     }
-  }, [setActiveHighlightBoth, t]);
+  }, [setActiveHighlightBoth, t, ocrModelReady, markOcrModelReady]);
 
   // ── Selection tracking ────────────────────────────────────────────────────────
   // Highlight zones (Pressable layer) handle delete-menu triggering.
@@ -427,6 +429,7 @@ export default function CameraScreen() {
             facing="back"
             autofocus={afMode}
             zoom={0}
+            enableTorch={torchOn}
           />
           <Pressable style={StyleSheet.absoluteFillObject} onPress={handleCameraTap} />
           {focusPoint && (
@@ -442,6 +445,9 @@ export default function CameraScreen() {
         <View style={styles.processingOverlay}>
           <ActivityIndicator size="large" color={colors.green} />
           <Text style={[styles.monoText, styles.processingLabel]}>{t('scanningText')}</Text>
+          {!ocrModelReady && (
+            <Text style={[styles.monoText, styles.processingSubLabel]}>{t('scanningFirstRun')}</Text>
+          )}
         </View>
       )}
 
@@ -517,9 +523,23 @@ export default function CameraScreen() {
         style={[styles.bottomBar, phase === 'reviewing' && styles.bottomBarReviewing]}
       >
         {phase === 'camera' && (
-          <TouchableOpacity onPress={handleCapture} style={styles.captureRing} activeOpacity={0.8}>
-            <View style={styles.captureDot} />
-          </TouchableOpacity>
+          <View style={styles.captureRow}>
+            <View style={{ width: 44 }} />
+            <TouchableOpacity onPress={handleCapture} style={styles.captureRing} activeOpacity={0.8}>
+              <View style={styles.captureDot} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTorchOn((prev) => !prev)}
+              style={styles.torchBtn}
+              activeOpacity={0.7}
+            >
+              <Feather
+                name={torchOn ? 'zap' : 'zap-off'}
+                size={22}
+                color={torchOn ? colors.yellow : colors.overlay1}
+              />
+            </TouchableOpacity>
+          </View>
         )}
 
         {phase === 'reviewing' && (
@@ -658,6 +678,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 14,
   },
   processingLabel: { color: colors.green, letterSpacing: 3, fontSize: 12 },
+  processingSubLabel: { color: colors.overlay1, letterSpacing: 0, fontSize: 12, marginTop: 12, lineHeight: 18, textAlign: 'center' },
   // ── Clean book page ───────────────────────────────────────────────────────────
   pageScroll: { flex: 1, backgroundColor: '#F4EDD3' },
   pageContent: { paddingHorizontal: 26, paddingTop: 110, paddingBottom: 165 },
@@ -711,12 +732,20 @@ const styles = StyleSheet.create({
   bottomBarReviewing: {
     backgroundColor: 'rgba(17,17,27,0.91)',
   },
+  captureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 20,
+  },
   captureRing: {
     width: 72, height: 72, borderRadius: 36,
     borderWidth: 3, borderColor: colors.text,
     alignItems: 'center', justifyContent: 'center',
   },
   captureDot: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.text },
+  torchBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   // ── Review buttons ────────────────────────────────────────────────────────────
   reviewBtns: { width: '100%', gap: 8 },
   reviewRow: { flexDirection: 'row', gap: 8 },

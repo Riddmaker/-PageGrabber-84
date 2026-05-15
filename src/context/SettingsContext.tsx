@@ -14,9 +14,11 @@ interface SettingsContextType {
   language: SupportedLanguage;
   dateFormat: DateFormat;
   hideOcrHint: boolean;
+  ocrModelReady: boolean;
   setLanguage: (lang: SupportedLanguage) => void;
   setDateFormat: (fmt: DateFormat) => void;
   setHideOcrHint: (val: boolean) => void;
+  markOcrModelReady: () => void;
   t: (key: keyof AppStrings) => string;
   formatDate: (timestamp: number) => string;
 }
@@ -25,9 +27,11 @@ const SettingsContext = createContext<SettingsContextType>({
   language: 'en',
   dateFormat: 'dd/mm/yyyy',
   hideOcrHint: false,
+  ocrModelReady: false,
   setLanguage: () => {},
   setDateFormat: () => {},
   setHideOcrHint: () => {},
+  markOcrModelReady: () => {},
   t: (key) => String(key),
   formatDate: (ts) => new Date(ts).toLocaleDateString(),
 });
@@ -39,6 +43,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<SupportedLanguage>(getDeviceLanguage);
   const [dateFormat, setDateFormatState] = useState<DateFormat>(getDeviceDateFormat);
   const [hideOcrHint, setHideOcrHintState] = useState(false);
+  const [ocrModelReady, setOcrModelReady] = useState(false);
 
   // Hydrate from persisted settings once DB is ready
   useEffect(() => {
@@ -55,6 +60,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
       if (savedHideHint === 'true') {
         setHideOcrHintState(true);
+      }
+      const savedOcrReady = await getSetting(db, 'ocrModelReady');
+      if (savedOcrReady === 'true') {
+        setOcrModelReady(true);
       }
     })().catch(console.error);
   }, [db]);
@@ -83,6 +92,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     [db]
   );
 
+  const markOcrModelReady = useCallback(() => {
+    setOcrModelReady(true);
+    if (db) saveSetting(db, 'ocrModelReady', 'true').catch(console.error);
+  }, [db]);
+
   const t = useCallback(
     (key: keyof AppStrings): string =>
       translations[language]?.[key] ?? translations.en[key] ?? String(key),
@@ -103,7 +117,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <SettingsContext.Provider value={{ language, dateFormat, hideOcrHint, setLanguage, setDateFormat, setHideOcrHint, t, formatDate }}>
+    <SettingsContext.Provider value={{ language, dateFormat, hideOcrHint, ocrModelReady, setLanguage, setDateFormat, setHideOcrHint, markOcrModelReady, t, formatDate }}>
       {children}
     </SettingsContext.Provider>
   );

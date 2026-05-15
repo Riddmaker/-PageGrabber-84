@@ -57,3 +57,7 @@ generate-icon.html
 
 # Claude Code local memory (not useful to others)
 .claude/
+
+
+#easbuilds
+pagegrabber-84-eas-builds-*.json
